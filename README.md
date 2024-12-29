@@ -1,3 +1,7 @@
+This repository is a fork of my professor's original repository for the course **Cloud Computing Technology Fundamentals**. It contains the complete course materials, including lecture notes, assignments, and projects. The official course webpage can be found [here](https://abhilash-jindal.com/teaching/2024-1-col-733/).  
+
+All the labs for this course are located in the [labs](./labs) directory. Unlike the original repository, this fork includes fully functional code for each lab, along with detailed explanations and relevant documentation within their respective folders.
+
 # Lecture notes 
 For COL733: cloud computing technology fundamentals, taught at IIT Delhi.
 
@@ -80,3 +84,12 @@ direct memory access, ring buffers; IO emulation: trap on PIO and MMIO,
 unnecessary VM exits since physical devices were not designed with
 virtualization goal; IO paravirtualization: reduce VM exits; HW assisted IO
 virtualization: SRIOV, IOMMU.
+
+# Labs
+1. [Map-reduce style computation](./labs/lab1): In this lab, built a distributed word-count application using Python and Redis. Workers processed tasks concurrently by reading file names from Redis streams, counting word frequencies, and storing results in a Redis sorted set. We ensured fault tolerance for worker crashes by redistributing unacknowledged tasks and making Redis updates atomic. Additionally, we implemented Redis fault tolerance by creating periodic checkpoints for recovery. This lab demonstrated key distributed system concepts like parallelism and fault tolerance.
+2. [Lightweight asynchronous consistent checkpointing](./labs/lab2): Implemented Chandy-Lamport Algorithm on a Flink-like setting for consistent global checkpointing of the system and used these checkpoints to recover from worker failures.
+3. [Chain Replication using CRAQ](./labs/lab3): Implemented strong consistency variant of CRAQ: A Distibuted Object-Storage System from scratch and improved the read throughput as compared to the basic implementation of Chain Replication that we had already provided where I ensured the read-write history is linearizable.
+4. [Bayou](./labs/lab4): Implemented a simplified version of [Bayou](https://people.eecs.berkeley.edu/~brewer/cs262b/update-conflicts.pdf) which is a weakly connected replicated storage system.
+
+# Project
+As the course project, we developed a simplified, toy version of Amazon Dynamo, Amazon's highly available key-value store. The implementation is available on my GitHub [here](https://github.com/RishabhS21/Dynamo-Amazon-s-Highly-Available-Key-value-Store).
