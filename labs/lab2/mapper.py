@@ -69,6 +69,24 @@ class MapperState:
   def recover(self, recovery_id: int, checkpoint_id: int):
     self.last_recovery_id = recovery_id
     # TODO
+    logging.info(f"{self.id} recovering from checkpoint {checkpoint_id}")
+    filename = f"checkpoints/{self.id}_{checkpoint_id}.txt"
+    with open(filename, 'r') as file:
+      self.last_stream_id = file.readline().strip().encode()
+    self.is_wc_done = False
+    
+    for i in range(len(self.reducer_sockets)):
+      self.reducer_sockets[i].close()
+      conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      while True:
+        try:
+          conn.connect(("localhost", self.reducer_ports[i]))
+          break
+        except ConnectionRefusedError:
+          # Keep trying, eventually reducer will be up.
+          logging.warning("Couldn't connect to reducer, waiting for it go up.")
+          time.sleep(0.2)
+      self.reducer_sockets[i] = conn
 
   # this hashing function will tell, to which reducer we should send a corresponding word
   # it returns the socket of the reducer
@@ -112,7 +130,22 @@ class Checkpoint(Cmd):
 
   def handle(self, state: MapperState):
     # TODO: this mapper received checkpoint marker from coordinator. Take appropriate actions.
-    pass
+    state.checkpoint(self.checkpoint_id)
+    
+    # Forward checkpoint marker to all reducers
+    for r_sock in state.reducer_sockets:
+      logging.info(f"Forwarding checkoint marker to reducers")
+      msg_bytes = Message(msg_type=MT.FWD_CHECKPOINT, source=state.id, checkpoint_id=self.checkpoint_id, recovery_id=self.recovery_id).serialize()
+      r_sock.sendall(msg_bytes)
+    
+    # Send checkpoint acknowledgment to the coordinator
+    logging.info(f"{state.id} sending checkpoint ack to coordinator")
+    if(self.checkpoint_id == 0):
+      ack_msg = Message(msg_type=MT.LAST_CHECKPOINT_ACK, source=state.id, checkpoint_id=self.checkpoint_id)
+    else:
+      ack_msg = Message(msg_type=MT.CHECKPOINT_ACK, source=state.id, checkpoint_id=self.checkpoint_id)
+    state.to_coordinator(ack_msg)
+    # pass
 
 @dataclass
 class Recover(Cmd):
@@ -121,7 +154,12 @@ class Recover(Cmd):
 
   def handle(self, state: MapperState):
     # TODO: This mapper need to recover from failure.
-    pass
+    state.recover(self.recovery_id, self.checkpoint_id)
+    # Send recovery acknowledgment to the coordinator
+    logging.info(f"{state.id} sending recovery ack to coordinator")
+    ack_msg = Message(msg_type=MT.RECOVERY_ACK, source=state.id, checkpoint_id=self.checkpoint_id,recovery_id=self.recovery_id)
+    state.to_coordinator(ack_msg)
+    # pass
 
 @dataclass
 class Exit(Cmd):

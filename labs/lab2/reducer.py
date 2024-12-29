@@ -25,7 +25,7 @@ def recvall(sock: socket.socket, length: int) -> bytes:
     while len(data) < length:
         packet = sock.recv(length - len(data))
         if not packet:
-            raise Exception("Connection closed before receiving the full message")
+            raise Exception("Connection closed")
         data += packet
     return data
 
@@ -69,6 +69,13 @@ class ReducerState:
   def recover(self, recovery_id: int, checkpoint_id: int):
     # TODO: Recover from checkpoint
     self.last_recovery_id = recovery_id
+    # Retrieve the word count from the specified checkpoint
+    logging.info(f"Recovering from checkpoint {checkpoint_id}")
+    filename = f"checkpoints/{self.id}_{checkpoint_id}.txt"
+    with open(filename, 'r') as file:
+        self.wc = json.load(file)
+    
+    self.barrier.reset()
 
   def exit(self):
     # Break existing map threads by re-opening sockets. while loop will create new ones
@@ -103,7 +110,15 @@ class CPMarker(Cmd):
 
   def handle(self, state: ReducerState):
     # TODO: this reducer has to checkpoint. Take appropriate actions.
-    pass
+    state.checkpoint(self.checkpoint_id)
+    
+    # Send checkpoint acknowledgment to the coordinator
+    if self.checkpoint_id == 0:
+      ack_msg = Message(msg_type=MT.LAST_CHECKPOINT_ACK, source=state.id, checkpoint_id=self.checkpoint_id)
+    else:
+      ack_msg = Message(msg_type=MT.CHECKPOINT_ACK, source=state.id, checkpoint_id=self.checkpoint_id)
+    state.to_coordinator(ack_msg)
+    # pass
 
 
 class Recover(Cmd):
@@ -113,7 +128,12 @@ class Recover(Cmd):
 
   def handle(self, state: ReducerState):
     # TODO: This reducer need to recover from failure.
-    pass
+    state.recover(self.recovery_id, self.checkpoint_id)
+    
+    # Send recovery acknowledgment to the coordinator
+    ack_msg = Message(msg_type=MT.RECOVERY_ACK, source=state.id,checkpoint_id=self.checkpoint_id,recovery_id=self.recovery_id)
+    state.to_coordinator(ack_msg)
+    # pass
 
 
 class WC(Cmd):
@@ -126,9 +146,9 @@ class WC(Cmd):
     if self.recovery_id == state.last_recovery_id:
       state.wc[self.word] += self.count
       logging.debug(f"Adding word count {self.word}={self.count}")
-    else:
-      logging.warning(
-        f"Ignoring in-flight messages with recovery_id = {self.recovery_id}.My recovery_id = {state.last_recovery_id}")
+    # else:
+    #   logging.warning(
+    #     f"Ignoring in-flight messages with recovery_id = {self.recovery_id}.My recovery_id = {state.last_recovery_id}")
 
 
 class Exit(Cmd):
@@ -212,7 +232,15 @@ class Reducer(Process):
 
         if message.msg_type == MT.FWD_CHECKPOINT:  # received checkpoint marker
           # TODO
-          pass
+          # self.cp_marker[message.source] = message.kwargs["checkpoint_id"]
+          mapper = 0 if message.source == "Mapper_0" else 1
+          self.cp_marker[mapper] = message.kwargs["checkpoint_id"]
+          
+          x = barrier.wait()
+          if x == 0 and (self.cp_marker[0] == self.cp_marker[1]):
+            cmd_q.put(CPMarker(checkpoint_id=message.kwargs["checkpoint_id"], recovery_id=message.kwargs["recovery_id"]))
+          barrier.wait()
+          # pass
         else:
           assert message.msg_type == MT.WORD_COUNT
           key = message.kwargs.get('key')
