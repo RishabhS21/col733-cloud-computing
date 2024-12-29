@@ -10,7 +10,7 @@ from config import config
 from worker import WcWorker
 from mrds import MyRedis
 from checkpoint import create_checkpoints
-
+import multiprocessing
 workers: list[WcWorker] = []
 def sigterm_handler(signum, frame):
   logging.info('Killing main process!')
@@ -20,6 +20,8 @@ def sigterm_handler(signum, frame):
 
 
 if __name__ == "__main__":
+  start_time = time.time()
+  multiprocessing.set_start_method('fork')
   # Clear the log file
   open(config["LOGFILE"], 'w').close()
   logging.basicConfig(# filename=LOGFILE,
@@ -66,3 +68,5 @@ if __name__ == "__main__":
 
   for word, c in rds.top(3):
     logging.info(f"{word.decode()}: {c}")
+  end_time = time.time()
+  logging.info(f"Time taken: {end_time - start_time}")

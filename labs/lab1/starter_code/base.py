@@ -21,7 +21,14 @@ class Worker(ABC):
 
   def create_and_run(self, **kwargs: Any) -> None:
     # Create a process using the multiprocessing library and set self.pid
-    raise NotImplementedError
+    process = Process(target=self.run, kwargs=kwargs)
+    process.start()
+    self.pid = process.pid
+    self.name = f"worker-{self.pid}"
+    logging.info(f"Started {self.name} with PID {self.pid}")
+    
+    # Wait for the process to complete
+    # process.join()
 
   @abstractmethod
   def run(self, **kwargs: Any) -> None:

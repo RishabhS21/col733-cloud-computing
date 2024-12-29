@@ -7,7 +7,7 @@ from redis.client import Redis
 
 from base import Worker
 from config import config
-
+import time
 
 class MyRedis:
   def __init__(self):
@@ -24,9 +24,10 @@ class MyRedis:
                                      withscores=True)
 
   def is_pending(self) -> bool:
-    # TODO
+    pending = self.rds.xpending_range(config["IN"], Worker.GROUP, '-', '+', count=1)
+    return len(pending) > 0
     pass
 
   def restart(self, downtime: int):
-    # TODO
+    time.sleep(downtime)
     pass

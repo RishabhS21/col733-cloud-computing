@@ -1,11 +1,11 @@
 {
     "LOGFILE": "/tmp/wc.log",
 
-    "N_NORMAL_WORKERS": 5,
+    "N_NORMAL_WORKERS": 8,
     "N_CRASHING_WORKERS": 2,
     "N_SLEEPING_WORKERS": 1,
 
-    "DATA_PATH":  "/home/baadalvm/data/*.csv",
+    "DATA_PATH":  "/Users/rishabhkumar/Documents/col733/col733-cloud/labs/lab1/data/*.csv",
     "IN":  "files",
     "FNAME":  "fname",
     "COUNT":  "count",
