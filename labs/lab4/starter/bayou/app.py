@@ -36,12 +36,14 @@ class AppLogEntry(LogEntry):
     def do(self, state: State) -> None:
         tstate = cast(AppState, state)
         # TODO 1:- Apply this logEntry on the state 
-        raise NotImplemented
+        tstate.s += self.char
+        # raise NotImplemented
 
     def undo(self, state: State) -> None:
         tstate = cast(AppState, state)
         # TODO 2:- Apply this logEntry on the state 
-        raise NotImplemented
+        tstate.s = tstate.s[:-1]
+        # raise NotImplemented
 
     def to_dict(self) -> dict[str, Any]:
         return {

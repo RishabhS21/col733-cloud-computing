@@ -148,7 +148,39 @@ class Storage:
       tentatives: These are given in the order of ltime.ts.
     """
     # TODO-3
-    raise NotImplemented()
+    with self._apply_lock:
+      # Apply the commits
+      # empty the tentative state
+      self.tentative_st = ""
+      # print("hello\n", type(self.tentative_st.s))
+
+      for t in tentatives:
+        if t not in self.tentative_log:
+          self.tentative_log.add(t)
+      for c in commits:
+        if c not in self.committed_log:
+        # if not self.c.is_ltime_earlier(c.ltime)
+        # continue
+          c.do(self.committed_st)
+          self.committed_log.append(c)
+          self.c.advance(c.ltime)
+          if c in self.tentative_log:
+            self.tentative_log.remove(c)
+
+
+      # Apply the tentatives
+      self.tentative_st = copy.deepcopy(self.committed_st)
+      self.f = copy.deepcopy(self.c)
+      for t in self.tentative_log:
+        # check t if not in commits
+        # if not self.f.is_ltime_earlier(t.ltime):
+        # continue
+        t.do(self.tentative_st)
+        # self.tentative_log.add(t)
+        self.f.advance(t.ltime)
+
+      # self.chk_invariants()
+    # raise NotImplemented()
 
 
   def commit(self, writes: list[LogEntry]) -> None:
@@ -169,4 +201,9 @@ class Storage:
       committed and tentative logEntries that I have and the other storage don't.
     """
     # TODO-4
-    raise NotImplemented()
+    assert (c.is_vtime_earlier(self.c) or self.c.is_vtime_earlier(c))
+    comitted_logs = [entry for entry in self.committed_log if not c.is_ltime_earlier(entry.ltime)]
+    tentative_logs = SortedList([entry for entry in self.tentative_log if not f.is_ltime_earlier(entry.ltime)], key=lambda l: l.ltime)
+
+    return comitted_logs, tentative_logs
+    # raise NotImplemented()

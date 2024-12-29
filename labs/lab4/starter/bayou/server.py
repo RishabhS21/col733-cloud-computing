@@ -85,7 +85,13 @@ class BayouServer(Server):
 
     if self._is_master:
       # TODO-5: Do something special
-      raise NotImplemented()
+      # committed_logs = committed_logs + tentative_logs
+      # add tentative logs to committed logs
+      for t in tentative_logs:
+        if t not in committed_logs:
+          committed_logs.append(t)
+      tentative_logs = SortedList()
+      # raise NotImplemented()
 
     return committed_logs, tentative_logs
 
